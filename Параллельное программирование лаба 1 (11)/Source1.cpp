@@ -19,7 +19,6 @@ void make_matrix(int *mas,  int len)
 		cout << mas[i] << "  ";
 	}
 }
-
 void let_me_see(int *mas, int len) 
 {   
 	
@@ -44,6 +43,25 @@ bool compare(int *posl, int *parallel,int height)
 	}
 
 	return res;
+}
+void MPI_SCATTER(int *sbuf, int scount, MPI_Datatype stype, int *rbuf, int rcount, MPI_Datatype rtype, int root, MPI_Comm comm)
+{
+	int mpi_rank, mpi_size;
+	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+	MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+	if (mpi_rank == root)
+	{
+		for (int i = 0; i < mpi_size; i++) //мы идем по всем ненулевым процессам
+		{
+			if (i == root)
+			{ for (int i=root*rcount;i<(root+1)*rcount;i++)
+				rbuf[i] = sbuf[i];
+				continue;
+			}
+			MPI_Send(&sbuf[i*(rcount)], rcount, MPI_INT, i, 0, MPI_COMM_WORLD);
+			cout << "Block of data was sent to process: " << i << endl;
+		}
+	}
 }
 
 int main(int argc, char** argv)
@@ -72,29 +90,31 @@ int main(int argc, char** argv)
 		cout << "mpi_size=" << mpi_size << endl; //вывод кол-ва действующих процессов в программе
 		cout << endl;
 		make_matrix(massive, length);  //заполняем и выводим матрицу
-		tmpres = massive;
-		for (int i = 1; i < mpi_size; i++) //мы идем по всем ненулевым процессам
-			{
-				MPI_Send(&massive[i*(coeff)], coeff, MPI_INT, i, 0, MPI_COMM_WORLD);
-				cout << "Block of data was sent to process: " << i << endl;
-			}
-			cout << "Block of data was delivered to process: " << mpi_rank << endl;
-			cout << "This block is: " << endl;
+
+		//for (int g = 0;g < coeff;g++) { tmp2[g] = massive[g]; }
+		//for (int i = 1; i < mpi_size; i++) //мы идем по всем ненулевым процессам
+		//	{
+		//		MPI_Send(&massive[i*(coeff)], coeff, MPI_INT, i, 0, MPI_COMM_WORLD);
+		//		cout << "Block of data was sent to process: " << i << endl;
+		//	}
+		//	cout << "Block of data was delivered to process: " << mpi_rank << endl;
+		//	cout << "This block is: " << endl;
+		MPI_SCATTER(massive, length, MPI_INT, tmp2, coeff, MPI_INT, 0, MPI_COMM_WORLD);
 	}
 		
 	
 	else            //если не в нулевом процессе
 	{
-	    int *tmp2 = new int[coeff];
+	    //int *tmp2 = new int[coeff];
 		MPI_Recv(tmp2, coeff, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); //принимаем в буфер tum нужную строку из нулевого процесса
 		cout << "Block of data was delivered to process: " << mpi_rank << endl;
 		cout << "This block is: " << endl;
 		let_me_see(tmp2, coeff);
-		tmpres = tmp2;
-		delete tmp2;
+		//tmpres = tmp2;
+		//delete tmp2;
 		
 	}
-	MPI_Gather(tmpres, coeff, MPI_INT, result, coeff, MPI_INT, 0, MPI_COMM_WORLD);	
+	MPI_Gather(tmp2, coeff, MPI_INT, result, coeff, MPI_INT, 0, MPI_COMM_WORLD);	
 	
 	if (mpi_rank == 0) //если в нулевом процессе
 	{
