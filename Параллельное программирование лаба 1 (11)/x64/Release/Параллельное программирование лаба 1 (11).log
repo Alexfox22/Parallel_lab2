@@ -1,7 +1,6 @@
 ﻿  Source1.cpp
-Source1.cpp(78): warning C4101: times: неиспользованная локальная переменная
-Source1.cpp(79): warning C4101: Status: неиспользованная локальная переменная
+Source1.cpp(84): warning C4101: Status: неиспользованная локальная переменная
   Создание кода
   All 15 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
   Создание кода завершено
-  Параллельное программирование лаба 1 (11).vcxproj -> C:\Users\nika-\documents\visual studio 2015\Projects\Параллельное программирование лаба 1 (11)\x64\Release\Параллельное программирование лаба 1 (11).exe
+  Параллельное программирование лаба 1 (11).vcxproj -> C:\Users\nika-\Documents\Visual Studio 2015\Projects\Параллельное программирование лаба 1 (11)\x64\Release\Параллельное программирование лаба 1 (11).exe
