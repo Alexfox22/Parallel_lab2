@@ -1,6 +1,8 @@
-﻿  Source1.cpp
-Source1.cpp(82): warning C4101: Status: неиспользованная локальная переменная
+﻿  Source.cpp
+  Source1.cpp
+Source1.cpp(93): warning C4244: аргумент: преобразование "time_t" в "unsigned int", возможна потеря данных
+Source1.cpp(89): warning C4101: Status: неиспользованная локальная переменная
   Создание кода
-  All 15 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  All 16 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
   Создание кода завершено
   Параллельное программирование лаба 1 (11).vcxproj -> C:\Users\nika-\Documents\Visual Studio 2015\Projects\Параллельное программирование лаба 1 (11)\x64\Release\Параллельное программирование лаба 1 (11).exe

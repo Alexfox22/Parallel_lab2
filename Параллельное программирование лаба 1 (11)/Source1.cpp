@@ -1,3 +1,4 @@
+#define MSMPI_NO_DEPRECATE_20
 #include <iostream>
 #include <mpi.h>
 #include <stdio.h>
@@ -8,13 +9,15 @@
 #define MPI_TAG 0
 #define max_value 10
 
+
 using namespace std;
 void make_matrix(double *mas,  int len)
 {
 
 	for (int i = 0;i<len;i++)
 	{
-		mas[i] = rand() % max_value;
+		//mas[i] = rand() % max_value;
+		mas[i] = ((double)rand() / RAND_MAX) * 10;
 	}
 }
 
@@ -40,34 +43,38 @@ bool compare(double *first, double *second,int length)
 		}
 	}
 
-	//MPI_Scatter();
 	return res;
 
 }
-void MPI_Scatter(double *sbuf, int scount, MPI_Datatype stype, double *rbuf, int rcount, MPI_Datatype rtype, int root, MPI_Comm comm)
+void MPI_Scatter(void *sbuf, int scount, MPI_Datatype stype, void *rbuf, int rcount, MPI_Datatype rtype, int root, MPI_Comm comm)
 {
 	int mpi_rank, mpi_size;
 	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
 	MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+	MPI_Aint sendExtent;
+	MPI_Aint recvExtent; 
 
-		for (int i = 0; i < mpi_size; i++) 
+	MPI_Type_extent(stype, &sendExtent); 
+	MPI_Type_extent(rtype, &recvExtent); 
+	MPI_Status status;
+	if (mpi_rank == root)
+	{
+
+		for (int i = 0; i < rcount * sendExtent; i++)
+			*((char *)(rbuf)+i) = *((char *)(sbuf)+root*rcount*sendExtent + i);
+		for (int i = 0; i < mpi_size; i++)
 		{
-			if (i == root)
-
-			{
-				int count = 0;
-				for (int i = root*rcount;i < (root + 1)*rcount;i++)
-				{
-					rbuf[count] = sbuf[i];
-					count++;
-				}
-				continue;
-			}
-		
-			MPI_Send(&sbuf[i*(rcount)], rcount, stype, i, 0, comm);
+			if (i == mpi_rank) continue;
+			MPI_Send((char *)sbuf + i * rcount * sendExtent,rcount, stype, i, 0, comm);		
 		}
-		cout << "Data was send" << endl;
+	}
+
+	else
+	{
+		MPI_Recv(rbuf, rcount, rtype, root, 0, comm, &status);
+	}
 }
+
 
 int main(int argc,char** argv)
 {
@@ -83,6 +90,7 @@ int main(int argc,char** argv)
 	int length = atoi(argv[1]);
 	mpi_root = atoi(argv[2]);
 	bool isProp = true;
+	srand(time(0));
 
 	int coeff = length / mpi_size;		//получаем размер блока данных,который мы будем передавать
 	double *tmp2 = new double[coeff];
@@ -90,26 +98,16 @@ int main(int argc,char** argv)
 	resultd = new double[length];     //выделяем память для результирующего массива
 	double startTime, endTime;
 
-
-
 	if (mpi_rank == mpi_root)                 //если в root
 	{
 		startTime = MPI_Wtime();
 		cout << "mpi_size=" << mpi_size << endl; //вывод кол-ва действующих процессов в программе
 		cout << endl;
 		make_matrix(massived, length);			//заполняем 
-		let_me_see(massived, length);			//выводим массив
-		MPI_Scatter(massived, length, MPI_DOUBLE, tmp2, coeff, MPI_DOUBLE, mpi_root, MPI_COMM_WORLD);  //раздаем из рута по кусочку каждому процессу
-		
+		let_me_see(massived, length);			//выводим массив	
 	}
-
-	else									 //если не в root
-	{
-		//cout << "Process num: " << mpi_rank << " got data" << endl;
-		MPI_Recv(tmp2, coeff, MPI_DOUBLE, mpi_root, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); //принимаем в буфер tum нужную строку из нулевого процесса	
-		
-	}
-	//MPI_Barrier(MPI_COMM_WORLD);
+	MPI_Scatter(massived, length, MPI_DOUBLE, tmp2, coeff, MPI_DOUBLE, mpi_root, MPI_COMM_WORLD);  //раздаем из рута по кусочку каждому процессу
+	
 	MPI_Gather(tmp2, coeff, MPI_DOUBLE, resultd, coeff, MPI_DOUBLE, mpi_root, MPI_COMM_WORLD);	
 	
 	if (mpi_rank == mpi_root) //если в нулевом процессе
@@ -119,9 +117,9 @@ int main(int argc,char** argv)
 		let_me_see(resultd, length);
 		if (compare(massived, resultd, length) == true)
 		{
-			cout << "equal";
+			cout << "equal" << endl;;
 		}
-		else cout << "not equal";
+		else cout << "not equal" << endl;
 		cout << "Time spended: " << endTime - startTime << endl;
 	}
 
