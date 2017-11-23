@@ -59,13 +59,17 @@ void MPI_Scatter(void *sbuf, int scount, MPI_Datatype stype, void *rbuf, int rco
 	MPI_Status status;
 	if (mpi_rank == root)
 	{
+		for (int i = 0; i < root; i++)
+		{
+			MPI_Send((char *)sbuf + i * rcount * sendExtent, rcount, stype, i, 0, comm);
+		}
 
 		for (int i = 0; i < rcount * sendExtent; i++)
 			*((char *)(rbuf)+i) = *((char *)(sbuf)+root*rcount*sendExtent + i);
-		for (int i = 0; i < mpi_size; i++)
+
+		for (int i = root + 1; i < mpi_size; i++)
 		{
-			if (i == mpi_rank) continue;
-			MPI_Send((char *)sbuf + i * rcount * sendExtent,rcount, stype, i, 0, comm);		
+			MPI_Send((char *)sbuf + i * rcount * sendExtent, rcount, stype, i, 0, comm);
 		}
 	}
 
@@ -83,19 +87,18 @@ int main(int argc,char** argv)
 	int mpi_root;
 	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank); 
 	MPI_Comm_size(MPI_COMM_WORLD, &mpi_size); 
-	double *massived;                //исходный массив
-	double *resultd;                //результирующий массив
+	double *massive;                //исходный массив
+	double *result;                //результирующий массив
 	int count = 0;                     //не надо на меня так смотреть,я ведь просто переменная
 	MPI_Status Status;                 //переменная статуса выполнения операции приема данных
 	int length = atoi(argv[1]);
 	mpi_root = atoi(argv[2]);
-	bool isProp = true;
 	srand(time(0));
 
 	int coeff = length / mpi_size;		//получаем размер блока данных,который мы будем передавать
 	double *tmp2 = new double[coeff];
-	massived = new double[length];    //выделяем необходимую память для маcсива
-	resultd = new double[length];     //выделяем память для результирующего массива
+	massive = new double[length];    //выделяем необходимую память для маcсива
+	result = new double[length];     //выделяем память для результирующего массива
 	double startTime, endTime;
 
 	if (mpi_rank == mpi_root)                 //если в root
@@ -103,28 +106,31 @@ int main(int argc,char** argv)
 		startTime = MPI_Wtime();
 		cout << "mpi_size=" << mpi_size << endl; //вывод кол-ва действующих процессов в программе
 		cout << endl;
-		make_matrix(massived, length);			//заполняем 
-		let_me_see(massived, length);			//выводим массив	
+		make_matrix(massive, length);			//заполняем 
+		if (length<51)
+		let_me_see(massive, length);			//выводим массив	
 	}
-	MPI_Scatter(massived, length, MPI_DOUBLE, tmp2, coeff, MPI_DOUBLE, mpi_root, MPI_COMM_WORLD);  //раздаем из рута по кусочку каждому процессу
+	MPI_Scatter(massive, length, MPI_DOUBLE, tmp2, coeff, MPI_DOUBLE, mpi_root, MPI_COMM_WORLD);  //раздаем из рута по кусочку каждому процессу
 	
-	MPI_Gather(tmp2, coeff, MPI_DOUBLE, resultd, coeff, MPI_DOUBLE, mpi_root, MPI_COMM_WORLD);	
+	MPI_Gather(tmp2, coeff, MPI_DOUBLE, result, coeff, MPI_DOUBLE, mpi_root, MPI_COMM_WORLD);	
 	
-	if (mpi_rank == mpi_root) //если в нулевом процессе
+	if (mpi_rank == mpi_root) //если в root
 	{
 		endTime = MPI_Wtime();
-		cout << "Returned massive is: " << endl;
-		let_me_see(resultd, length);
-		if (compare(massived, resultd, length) == true)
+		if (length < 51)
 		{
-			cout << "equal" << endl;;
+			cout << "Returned massive is: " << endl;
+			let_me_see(result, length);
+		}
+		if (compare(massive, result, length) == true)
+		{
+			cout << "equal" << endl;
 		}
 		else cout << "not equal" << endl;
 		cout << "Time spended: " << endTime - startTime << endl;
 	}
 
-	  delete massived, resultd; //очищаем память
-	  delete tmp2;
+	  delete massive, result, tmp2; //очищаем память
 	  MPI_Finalize(); //завершаем работу с MPI
 	  return 0;
 }
